@@ -12,11 +12,28 @@ const (
 	screenHeight = 600
 )
 
+func swap[T any](a T, b T) (T, T) {
+	return b, a
+}
+
 func line(ax int32, ay int32, bx int32, by int32, fb *window.Framebuffer, color uint32) {
-	for t := 0.0; t < 1.0; t += 0.002 {
-		x := int32(math.Round(float64(ax) + float64(bx-ax)*t))
+	steep := math.Abs(float64(ax-bx)) < math.Abs(float64(ay-by))
+	if steep {
+		ax, ay = swap(ax, ay)
+		bx, by = swap(bx, by)
+	}
+	if ax > bx {
+		ax, bx = swap(ax, bx)
+		ay, by = swap(ay, by)
+	}
+	for x := ax; x <= bx; x++ {
+		t := float64(x-ax) / float64(bx-ax)
 		y := int32(math.Round(float64(ay) + float64(by-ay)*t))
-		fb.SetPixel(x, y, color)
+		if steep {
+			fb.SetPixel(y, x, color)
+		} else {
+			fb.SetPixel(x, y, color)
+		}
 	}
 }
 
