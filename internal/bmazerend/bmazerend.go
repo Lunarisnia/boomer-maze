@@ -29,14 +29,14 @@ func line(ax int32, ay int32, bx int32, by int32, fb *window.Framebuffer, color 
 		ax, bx = swap(ax, bx)
 		ay, by = swap(ay, by)
 	}
+	y := float64(ay)
 	for x := ax; x <= bx; x++ {
-		t := float64(x-ax) / float64(bx-ax)
-		y := int32(math.Round(float64(ay) + float64(by-ay)*t))
 		if steep {
-			fb.SetPixel(y, x, color)
+			fb.SetPixel(int32(y), x, color)
 		} else {
-			fb.SetPixel(x, y, color)
+			fb.SetPixel(x, int32(y), color)
 		}
+		y += float64(by-ay) / float64(bx-ax)
 	}
 }
 
