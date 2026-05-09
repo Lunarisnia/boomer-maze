@@ -13,8 +13,10 @@ const (
 
 func draw(ctx *window.WindowContext) {
 	// render
-	ctx.Framebuffer.Clear(0xFF000000)                                   // black
-	ctx.Framebuffer.SetPixel(screenWidth/2, screenHeight/2, 0xFFFF0000) // red dot
+	ctx.Framebuffer.Clear(0xFF000000)                     // black
+	ctx.Framebuffer.SetPixel(100, 100, window.ColorWhite) // red dot
+	ctx.Framebuffer.SetPixel(200, 100, window.ColorWhite) // red dot
+	ctx.Framebuffer.SetPixel(200, 400, window.ColorWhite) // red dot
 
 	// blit framebuffer to texture
 	ctx.Texture.Update(nil, unsafe.Pointer(&ctx.Framebuffer.Pixels[0]), int(ctx.Framebuffer.Width)*4)
