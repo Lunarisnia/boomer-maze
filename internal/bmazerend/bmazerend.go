@@ -20,6 +20,7 @@ func swap[T any](a T, b T) (T, T) {
 }
 
 func line(ax int32, ay int32, bx int32, by int32, fb *window.Framebuffer, color uint32) {
+	// TODO: Implement the error based optimization
 	steep := math.Abs(float64(ax-bx)) < math.Abs(float64(ay-by))
 	if steep {
 		ax, ay = swap(ax, ay)
