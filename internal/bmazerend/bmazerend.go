@@ -1,16 +1,22 @@
 package bmazerend
 
 import (
+	"log"
 	"math"
 	"unsafe"
 
 	"github.com/lunarisnia/boomer-maze/internal/bmazerend/window"
+	"github.com/lunarisnia/boomer-maze/internal/gmath"
+	"github.com/lunarisnia/boomer-maze/internal/wavefront"
 )
 
 const (
 	screenWidth  = 800
 	screenHeight = 600
 )
+
+var loadedModel *wavefront.Object
+var angle float64 = 0.0
 
 func swap[T any](a T, b T) (T, T) {
 	return b, a
@@ -50,9 +56,28 @@ func draw(ctx *window.WindowContext) {
 	// render
 	ctx.Framebuffer.Clear(0xFF000000) // black
 
-	line(100, 100, 220, 120, ctx.Framebuffer, window.ColorGreen)
-	line(220, 120, 200, 400, ctx.Framebuffer, window.ColorGreen)
-	line(200, 400, 100, 100, ctx.Framebuffer, window.ColorGreen)
+	for _, indice := range loadedModel.Faces {
+		aLocal := loadedModel.Vertice[indice.X]
+		bLocal := loadedModel.Vertice[indice.Y]
+		cLocal := loadedModel.Vertice[indice.Z]
+		pos := gmath.Vector3[float64]{
+			X: 0.0,
+			Y: 0.0,
+			Z: 1.5,
+		}
+
+		aLocal = gmath.RotateY(aLocal, angle)
+		bLocal = gmath.RotateY(bLocal, angle)
+		cLocal = gmath.RotateY(cLocal, angle)
+
+		ax, ay, _ := gmath.LocalToScreen(aLocal, pos, screenWidth, screenHeight, 60)
+		bx, by, _ := gmath.LocalToScreen(bLocal, pos, screenWidth, screenHeight, 60)
+		cx, cy, _ := gmath.LocalToScreen(cLocal, pos, screenWidth, screenHeight, 60)
+		line(int32(ax), int32(ay), int32(bx), int32(by), ctx.Framebuffer, window.ColorRed)
+		line(int32(bx), int32(by), int32(cx), int32(cy), ctx.Framebuffer, window.ColorRed)
+		line(int32(cx), int32(cy), int32(ax), int32(ay), ctx.Framebuffer, window.ColorRed)
+	}
+	angle += 0.001
 
 	// blit framebuffer to texture
 	ctx.Texture.Update(nil, unsafe.Pointer(&ctx.Framebuffer.Pixels[0]), int(ctx.Framebuffer.Width)*4)
@@ -65,6 +90,12 @@ func Run() {
 	win := window.New("Test", screenWidth, screenHeight)
 	defer win.Destroy()
 	win.SetDrawFunction(draw)
+
+	model, err := wavefront.LoadModel("./models/diablo3_pose.obj")
+	if err != nil {
+		log.Fatalln(err)
+	}
+	loadedModel = model
 
 	win.Run()
 }
