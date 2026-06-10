@@ -1,13 +1,12 @@
 package bmazerend
 
 import (
-	"log"
 	"math"
 	"unsafe"
 
 	"github.com/lunarisnia/boomer-maze/internal/bmazerend/window"
 	"github.com/lunarisnia/boomer-maze/internal/gmath"
-	"github.com/lunarisnia/boomer-maze/internal/wavefront"
+	"github.com/lunarisnia/boomer-maze/internal/valueutil"
 )
 
 const (
@@ -15,22 +14,16 @@ const (
 	screenHeight = 600
 )
 
-var loadedModel *wavefront.Object
-var angle float64 = 0.0
-
-func swap[T any](a T, b T) (T, T) {
-	return b, a
-}
-
+// Bressenham line drawing algorithm, I don't understand most of this
 func line(ax int32, ay int32, bx int32, by int32, fb *window.Framebuffer, color uint32) {
 	steep := math.Abs(float64(ax-bx)) < math.Abs(float64(ay-by))
 	if steep {
-		ax, ay = swap(ax, ay)
-		bx, by = swap(bx, by)
+		ax, ay = valueutil.Swap(ax, ay)
+		bx, by = valueutil.Swap(bx, by)
 	}
 	if ax > bx {
-		ax, bx = swap(ax, bx)
-		ay, by = swap(ay, by)
+		ax, bx = valueutil.Swap(ax, bx)
+		ay, by = valueutil.Swap(ay, by)
 	}
 	y := float64(ay)
 	var iError int32 = 0
@@ -52,32 +45,73 @@ func line(ax int32, ay int32, bx int32, by int32, fb *window.Framebuffer, color 
 	}
 }
 
+func rasterize(fb *window.Framebuffer, triangles []gmath.Triangle[int32]) {
+	// Sort seems unnecessary for this method
+	// sort.Slice(triangles, func(i, j int) bool {
+	// 	closest := triangles[i]
+	// 	b := triangles[j]
+	// 	if (closest.A.Y < b.A.Y) || (closest.B.Y < b.B.Y) || (closest.C.Y < b.C.Y) {
+	// 		closest = b
+	// 	}
+	// 	return closest == b
+	// })
+
+	// For every sorted triangle points
+	for _, t := range triangles {
+		// Iterate over all pixels on the screen
+		for j := range int32(screenHeight) {
+			for i := range int32(screenWidth) {
+				// Check if point is inside the triangle
+				if gmath.IsInsideTriangle(t.A, t.B, t.C, gmath.Vector3[int32]{
+					X: i,
+					Y: j,
+					Z: 0,
+				}) {
+					fb.SetPixel(i, j, t.Color)
+				}
+			}
+		}
+	}
+}
+
 func draw(ctx *window.WindowContext) {
 	// render
 	ctx.Framebuffer.Clear(0xFF000000) // black
 
-	for _, indice := range loadedModel.Faces {
-		aLocal := loadedModel.Vertice[indice.X]
-		bLocal := loadedModel.Vertice[indice.Y]
-		cLocal := loadedModel.Vertice[indice.Z]
-		pos := gmath.Vector3[float64]{
-			X: 0.0,
-			Y: 0.0,
-			Z: 1.5,
-		}
-
-		aLocal = gmath.RotateY(aLocal, angle)
-		bLocal = gmath.RotateY(bLocal, angle)
-		cLocal = gmath.RotateY(cLocal, angle)
-
-		ax, ay, _ := gmath.LocalToScreen(aLocal, pos, screenWidth, screenHeight, 60)
-		bx, by, _ := gmath.LocalToScreen(bLocal, pos, screenWidth, screenHeight, 60)
-		cx, cy, _ := gmath.LocalToScreen(cLocal, pos, screenWidth, screenHeight, 60)
-		line(int32(ax), int32(ay), int32(bx), int32(by), ctx.Framebuffer, window.ColorRed)
-		line(int32(bx), int32(by), int32(cx), int32(cy), ctx.Framebuffer, window.ColorRed)
-		line(int32(cx), int32(cy), int32(ax), int32(ay), ctx.Framebuffer, window.ColorRed)
+	a := gmath.Vector3[int32]{
+		X: 100,
+		Y: 100,
+		Z: 0,
 	}
-	angle += 0.001
+	b := gmath.Vector3[int32]{
+		X: 200,
+		Y: 100,
+		Z: 0,
+	}
+	c := gmath.Vector3[int32]{
+		X: 200,
+		Y: 300,
+		Z: 0,
+	}
+
+	a2 := gmath.Vector3[int32]{
+		X: 300,
+		Y: 50,
+		Z: 0,
+	}
+	b2 := gmath.Vector3[int32]{
+		X: 400,
+		Y: 200,
+		Z: 0,
+	}
+	c2 := gmath.Vector3[int32]{
+		X: 50,
+		Y: 200,
+		Z: 0,
+	}
+	t1 := gmath.NewTriangle(a, b, c, window.ColorRed)
+	t2 := gmath.NewTriangle(a2, b2, c2, window.ColorMagenta)
+	rasterize(ctx.Framebuffer, []gmath.Triangle[int32]{t1, t2})
 
 	// blit framebuffer to texture
 	ctx.Texture.Update(nil, unsafe.Pointer(&ctx.Framebuffer.Pixels[0]), int(ctx.Framebuffer.Width)*4)
@@ -90,12 +124,6 @@ func Run() {
 	win := window.New("Test", screenWidth, screenHeight)
 	defer win.Destroy()
 	win.SetDrawFunction(draw)
-
-	model, err := wavefront.LoadModel("./models/diablo3_pose.obj")
-	if err != nil {
-		log.Fatalln(err)
-	}
-	loadedModel = model
 
 	win.Run()
 }
