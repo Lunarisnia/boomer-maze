@@ -45,6 +45,61 @@ func line(ax int32, ay int32, bx int32, by int32, fb *window.Framebuffer, color 
 	}
 }
 
+type BoundingBox struct {
+	MinX int32
+	MinY int32
+
+	MaxX int32
+	MaxY int32
+}
+
+func findBoundingBox(t gmath.Triangle[int32]) BoundingBox {
+	minX := int32(0)
+	minY := int32(0)
+
+	maxX := int32(0)
+	maxY := int32(0)
+	if t.A.X <= t.B.X && t.A.X <= t.C.X {
+		minX = t.A.X
+	} else if t.B.X <= t.A.X && t.B.X <= t.C.X {
+		minX = t.B.X
+	} else if t.C.X <= t.A.X && t.C.X <= t.B.X {
+		minX = t.C.X
+	}
+
+	if t.A.X >= t.B.X && t.A.X >= t.C.X {
+		maxX = t.A.X
+	} else if t.B.X >= t.A.X && t.B.X >= t.C.X {
+		maxX = t.B.X
+	} else if t.C.X >= t.A.X && t.C.X >= t.B.X {
+		maxX = t.C.X
+	}
+
+	if t.A.Y <= t.B.Y && t.A.Y <= t.C.Y {
+		minY = t.A.Y
+	} else if t.B.Y <= t.A.Y && t.B.Y <= t.C.Y {
+		minY = t.B.Y
+	} else if t.C.Y <= t.A.Y && t.C.Y <= t.B.Y {
+		minY = t.C.Y
+	}
+
+	if t.A.Y >= t.B.Y && t.A.Y >= t.C.Y {
+		maxY = t.A.Y
+	} else if t.B.Y >= t.A.Y && t.B.Y >= t.C.Y {
+		maxY = t.B.Y
+	} else if t.C.Y >= t.A.Y && t.C.Y >= t.B.Y {
+		maxY = t.C.Y
+	}
+
+	return BoundingBox{
+		MinX: minX,
+		MinY: minY,
+
+		MaxX: maxX,
+		MaxY: maxY,
+	}
+}
+
 func rasterize(fb *window.Framebuffer, triangles []gmath.Triangle[int32]) {
 	// Sort seems unnecessary for this method
 	// sort.Slice(triangles, func(i, j int) bool {
@@ -58,9 +113,10 @@ func rasterize(fb *window.Framebuffer, triangles []gmath.Triangle[int32]) {
 
 	// For every sorted triangle points
 	for _, t := range triangles {
+		boundingBox := findBoundingBox(t)
 		// Iterate over all pixels on the screen
-		for j := range int32(screenHeight) {
-			for i := range int32(screenWidth) {
+		for j := boundingBox.MinY; j < boundingBox.MaxY; j++ {
+			for i := boundingBox.MinX; i < boundingBox.MaxX; i++ {
 				// Check if point is inside the triangle
 				if gmath.IsInsideTriangle(t.A, t.B, t.C, gmath.Vector3[int32]{
 					X: i,
