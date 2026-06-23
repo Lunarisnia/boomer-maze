@@ -100,6 +100,13 @@ func findBoundingBox(t gmath.Triangle[int32]) BoundingBox {
 	}
 }
 
+func signedTriangleArea(triangle gmath.Triangle[int32]) float64 {
+	a := (float64(triangle.B.Y) - float64(triangle.A.Y)) * (float64(triangle.B.X) + float64(triangle.A.X))
+	b := (float64(triangle.C.Y) - float64(triangle.B.Y)) * (float64(triangle.C.X) + float64(triangle.B.X))
+	c := (float64(triangle.A.Y) - float64(triangle.C.Y)) * (float64(triangle.A.X) + float64(triangle.C.X))
+	return 0.5 * (a + b + c)
+}
+
 func rasterize(fb *window.Framebuffer, triangles []gmath.Triangle[int32]) {
 	// Sort seems unnecessary for this method
 	// sort.Slice(triangles, func(i, j int) bool {
@@ -112,19 +119,34 @@ func rasterize(fb *window.Framebuffer, triangles []gmath.Triangle[int32]) {
 	// })
 
 	// For every sorted triangle points
+	// WIP: Still not rendering triangle correctly, need to check if bounding box are correct
 	for _, t := range triangles {
 		boundingBox := findBoundingBox(t)
+		totalArea := signedTriangleArea(t)
 		// Iterate over all pixels on the screen
-		for j := boundingBox.MinY; j < boundingBox.MaxY; j++ {
-			for i := boundingBox.MinX; i < boundingBox.MaxX; i++ {
-				// Check if point is inside the triangle
-				if gmath.IsInsideTriangle(t.A, t.B, t.C, gmath.Vector3[int32]{
-					X: i,
-					Y: j,
+		for x := boundingBox.MinY; x < boundingBox.MaxY; x++ {
+			for y := boundingBox.MinX; y < boundingBox.MaxX; y++ {
+				alpha := signedTriangleArea(gmath.NewTriangle(gmath.Vector3[int32]{
+					X: x,
+					Y: y,
 					Z: 0,
-				}) {
-					fb.SetPixel(i, j, t.Color)
+				}, t.B, t.C, window.ColorBlue)) / totalArea
+				beta := signedTriangleArea(gmath.NewTriangle(gmath.Vector3[int32]{
+					X: x,
+					Y: y,
+					Z: 0,
+				}, t.C, t.A, window.ColorBlue)) / totalArea
+				gamma := signedTriangleArea(gmath.NewTriangle(gmath.Vector3[int32]{
+					X: x,
+					Y: y,
+					Z: 0,
+				}, t.A, t.B, window.ColorBlue)) / totalArea
+				// Check if point is inside the triangle
+				isOutside := alpha < 0 || beta < 0 || gamma < 0
+				if isOutside {
+					continue
 				}
+				fb.SetPixel(y, x, t.Color)
 			}
 		}
 	}
@@ -150,24 +172,24 @@ func draw(ctx *window.WindowContext) {
 		Z: 0,
 	}
 
-	a2 := gmath.Vector3[int32]{
-		X: 300,
-		Y: 50,
-		Z: 0,
-	}
-	b2 := gmath.Vector3[int32]{
-		X: 400,
-		Y: 200,
-		Z: 0,
-	}
-	c2 := gmath.Vector3[int32]{
-		X: 50,
-		Y: 200,
-		Z: 0,
-	}
-	t1 := gmath.NewTriangle(a, b, c, window.ColorRed)
-	t2 := gmath.NewTriangle(a2, b2, c2, window.ColorMagenta)
-	rasterize(ctx.Framebuffer, []gmath.Triangle[int32]{t1, t2})
+	// a2 := gmath.Vector3[int32]{
+	// 	X: 300,
+	// 	Y: 200,
+	// 	Z: 0,
+	// }
+	// b2 := gmath.Vector3[int32]{
+	// 	X: 340,
+	// 	Y: 200,
+	// 	Z: 0,
+	// }
+	// c2 := gmath.Vector3[int32]{
+	// 	X: 500,
+	// 	Y: 400,
+	// 	Z: 0,
+	// }
+	t1 := gmath.NewTriangle(a, b, c, window.ColorBlue)
+	// t2 := gmath.NewTriangle(a2, b2, c2, window.ColorMagenta)
+	rasterize(ctx.Framebuffer, []gmath.Triangle[int32]{t1})
 
 	// blit framebuffer to texture
 	ctx.Texture.Update(nil, unsafe.Pointer(&ctx.Framebuffer.Pixels[0]), int(ctx.Framebuffer.Width)*4)
