@@ -1,18 +1,25 @@
 package bmazerend
 
 import (
+	"log"
 	"math"
+	"math/rand"
 	"unsafe"
 
 	"github.com/lunarisnia/boomer-maze/internal/bmazerend/window"
 	"github.com/lunarisnia/boomer-maze/internal/gmath"
 	"github.com/lunarisnia/boomer-maze/internal/valueutil"
+	"github.com/lunarisnia/boomer-maze/internal/wavefront"
 )
 
 const (
 	screenWidth  = 800
 	screenHeight = 600
 )
+
+var loadedModel *wavefront.Object
+var faceColors []uint32
+var angle float64 = 0.0
 
 // Bressenham line drawing algorithm, I don't understand most of this
 func line(ax int32, ay int32, bx int32, by int32, fb *window.Framebuffer, color uint32) {
@@ -71,21 +78,12 @@ func signedTriangleArea(triangle gmath.Triangle[int32]) float64 {
 }
 
 func rasterize(fb *window.Framebuffer, triangles []gmath.Triangle[int32]) {
-	// Sort seems unnecessary for this method
-	// sort.Slice(triangles, func(i, j int) bool {
-	// 	closest := triangles[i]
-	// 	b := triangles[j]
-	// 	if (closest.A.Y < b.A.Y) || (closest.B.Y < b.B.Y) || (closest.C.Y < b.C.Y) {
-	// 		closest = b
-	// 	}
-	// 	return closest == b
-	// })
-
-	// For every sorted triangle points
-	// WIP: Still not rendering triangle correctly, need to check if bounding box are correct
 	for _, t := range triangles {
 		boundingBox := findBoundingBox(t)
 		totalArea := signedTriangleArea(t)
+		if totalArea < 1 {
+			return
+		}
 		// Iterate over all pixels on the screen
 		for y := boundingBox.MinY; y < boundingBox.MaxY; y++ {
 			for x := boundingBox.MinX; x < boundingBox.MaxX; x++ {
@@ -115,44 +113,43 @@ func rasterize(fb *window.Framebuffer, triangles []gmath.Triangle[int32]) {
 	}
 }
 
+func triangle(fb *window.Framebuffer, t gmath.Triangle[int32]) {
+	rasterize(fb, []gmath.Triangle[int32]{t})
+}
+
 func draw(ctx *window.WindowContext) {
 	// render
 	ctx.Framebuffer.Clear(0xFF000000) // black
 
-	a := gmath.Vector3[int32]{
-		X: 100,
-		Y: 100,
-		Z: 0,
-	}
-	b := gmath.Vector3[int32]{
-		X: 200,
-		Y: 100,
-		Z: 0,
-	}
-	c := gmath.Vector3[int32]{
-		X: 200,
-		Y: 300,
-		Z: 0,
-	}
+	for i, indice := range loadedModel.Faces {
+		aLocal := loadedModel.Vertice[indice.X]
+		bLocal := loadedModel.Vertice[indice.Y]
+		cLocal := loadedModel.Vertice[indice.Z]
+		pos := gmath.Vector3[float64]{
+			X: 0.0,
+			Y: 0.0,
+			Z: 1.5,
+		}
 
-	a2 := gmath.Vector3[int32]{
-		X: 10,
-		Y: 200,
-		Z: 0,
+		aLocal = gmath.RotateY(aLocal, angle)
+		bLocal = gmath.RotateY(bLocal, angle)
+		cLocal = gmath.RotateY(cLocal, angle)
+
+		ax, ay, aVisible := gmath.LocalToScreen(aLocal, pos, screenWidth, screenHeight, 60)
+		bx, by, bVisible := gmath.LocalToScreen(bLocal, pos, screenWidth, screenHeight, 60)
+		cx, cy, cVisible := gmath.LocalToScreen(cLocal, pos, screenWidth, screenHeight, 60)
+		if !aVisible || !bVisible || !cVisible {
+			continue
+		}
+
+		triangle(ctx.Framebuffer, gmath.NewTriangle(
+			gmath.Vector3[int32]{X: int32(ay), Y: int32(ax), Z: 0},
+			gmath.Vector3[int32]{X: int32(by), Y: int32(bx), Z: 0},
+			gmath.Vector3[int32]{X: int32(cy), Y: int32(cx), Z: 0},
+			faceColors[i],
+		))
 	}
-	b2 := gmath.Vector3[int32]{
-		X: 340,
-		Y: 200,
-		Z: 0,
-	}
-	c2 := gmath.Vector3[int32]{
-		X: 500,
-		Y: 400,
-		Z: 0,
-	}
-	t1 := gmath.NewTriangle(a, b, c, window.ColorBlue)
-	t2 := gmath.NewTriangle(a2, b2, c2, window.ColorMagenta)
-	rasterize(ctx.Framebuffer, []gmath.Triangle[int32]{t1, t2})
+	angle += 0.001
 
 	// blit framebuffer to texture
 	ctx.Texture.Update(nil, unsafe.Pointer(&ctx.Framebuffer.Pixels[0]), int(ctx.Framebuffer.Width)*4)
@@ -165,6 +162,15 @@ func Run() {
 	win := window.New("Test", screenWidth, screenHeight)
 	defer win.Destroy()
 	win.SetDrawFunction(draw)
+
+	model, err := wavefront.LoadModel("./models/african_head.obj")
+	if err != nil {
+		log.Fatalln(err)
+	}
+	loadedModel = model
+	for range len(model.Faces) {
+		faceColors = append(faceColors, rand.Uint32())
+	}
 
 	win.Run()
 }
