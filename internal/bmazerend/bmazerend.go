@@ -54,49 +54,12 @@ type BoundingBox struct {
 }
 
 func findBoundingBox(t gmath.Triangle[int32]) BoundingBox {
-	minX := int32(0)
-	minY := int32(0)
-
-	maxX := int32(0)
-	maxY := int32(0)
-	if t.A.X <= t.B.X && t.A.X <= t.C.X {
-		minX = t.A.X
-	} else if t.B.X <= t.A.X && t.B.X <= t.C.X {
-		minX = t.B.X
-	} else if t.C.X <= t.A.X && t.C.X <= t.B.X {
-		minX = t.C.X
-	}
-
-	if t.A.X >= t.B.X && t.A.X >= t.C.X {
-		maxX = t.A.X
-	} else if t.B.X >= t.A.X && t.B.X >= t.C.X {
-		maxX = t.B.X
-	} else if t.C.X >= t.A.X && t.C.X >= t.B.X {
-		maxX = t.C.X
-	}
-
-	if t.A.Y <= t.B.Y && t.A.Y <= t.C.Y {
-		minY = t.A.Y
-	} else if t.B.Y <= t.A.Y && t.B.Y <= t.C.Y {
-		minY = t.B.Y
-	} else if t.C.Y <= t.A.Y && t.C.Y <= t.B.Y {
-		minY = t.C.Y
-	}
-
-	if t.A.Y >= t.B.Y && t.A.Y >= t.C.Y {
-		maxY = t.A.Y
-	} else if t.B.Y >= t.A.Y && t.B.Y >= t.C.Y {
-		maxY = t.B.Y
-	} else if t.C.Y >= t.A.Y && t.C.Y >= t.B.Y {
-		maxY = t.C.Y
-	}
-
 	return BoundingBox{
-		MinX: minX,
-		MinY: minY,
+		MinX: min(min(t.A.X, t.B.X), t.C.X),
+		MinY: min(min(t.A.Y, t.B.Y), t.C.Y),
 
-		MaxX: maxX,
-		MaxY: maxY,
+		MaxX: max(max(t.A.X, t.B.X), t.C.X),
+		MaxY: max(max(t.A.Y, t.B.Y), t.C.Y),
 	}
 }
 
@@ -124,8 +87,8 @@ func rasterize(fb *window.Framebuffer, triangles []gmath.Triangle[int32]) {
 		boundingBox := findBoundingBox(t)
 		totalArea := signedTriangleArea(t)
 		// Iterate over all pixels on the screen
-		for x := boundingBox.MinY; x < boundingBox.MaxY; x++ {
-			for y := boundingBox.MinX; y < boundingBox.MaxX; y++ {
+		for y := boundingBox.MinY; y < boundingBox.MaxY; y++ {
+			for x := boundingBox.MinX; x < boundingBox.MaxX; x++ {
 				alpha := signedTriangleArea(gmath.NewTriangle(gmath.Vector3[int32]{
 					X: x,
 					Y: y,
@@ -172,24 +135,24 @@ func draw(ctx *window.WindowContext) {
 		Z: 0,
 	}
 
-	// a2 := gmath.Vector3[int32]{
-	// 	X: 300,
-	// 	Y: 200,
-	// 	Z: 0,
-	// }
-	// b2 := gmath.Vector3[int32]{
-	// 	X: 340,
-	// 	Y: 200,
-	// 	Z: 0,
-	// }
-	// c2 := gmath.Vector3[int32]{
-	// 	X: 500,
-	// 	Y: 400,
-	// 	Z: 0,
-	// }
+	a2 := gmath.Vector3[int32]{
+		X: 10,
+		Y: 200,
+		Z: 0,
+	}
+	b2 := gmath.Vector3[int32]{
+		X: 340,
+		Y: 200,
+		Z: 0,
+	}
+	c2 := gmath.Vector3[int32]{
+		X: 500,
+		Y: 400,
+		Z: 0,
+	}
 	t1 := gmath.NewTriangle(a, b, c, window.ColorBlue)
-	// t2 := gmath.NewTriangle(a2, b2, c2, window.ColorMagenta)
-	rasterize(ctx.Framebuffer, []gmath.Triangle[int32]{t1})
+	t2 := gmath.NewTriangle(a2, b2, c2, window.ColorMagenta)
+	rasterize(ctx.Framebuffer, []gmath.Triangle[int32]{t1, t2})
 
 	// blit framebuffer to texture
 	ctx.Texture.Update(nil, unsafe.Pointer(&ctx.Framebuffer.Pixels[0]), int(ctx.Framebuffer.Width)*4)
