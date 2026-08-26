@@ -82,7 +82,7 @@ func rasterize(fb *window.Framebuffer, triangles []gmath.Triangle[int32]) {
 		boundingBox := findBoundingBox(t)
 		totalArea := signedTriangleArea(t)
 		if totalArea < 1 {
-			return
+			continue
 		}
 		// Iterate over all pixels on the screen
 		for y := boundingBox.MinY; y < boundingBox.MaxY; y++ {
@@ -174,3 +174,5 @@ func Run() {
 
 	win.Run()
 }
+
+// TODO: Next goal: Understand why backface culling hack worked
