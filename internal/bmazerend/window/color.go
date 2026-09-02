@@ -11,3 +11,7 @@ const (
 	ColorMagenta = 0xFF_FF_00_FF
 	ColorGray    = 0xFF_80_80_80
 )
+
+func ARGB(a, r, g, b uint8) uint32 {
+	return uint32(a)<<24 | uint32(r)<<16 | uint32(g)<<8 | uint32(b)
+}
