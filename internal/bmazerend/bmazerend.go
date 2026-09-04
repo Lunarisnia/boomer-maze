@@ -101,8 +101,10 @@ func rasterize(fb *window.Framebuffer, triangles []gmath.Triangle[int32]) {
 					continue
 				}
 
-				color := uint8(alpha*float64(t.A.Z) + beta*float64(t.B.Z) + gamma*float64(t.C.Z))
-				fb.SetPixel(x, y, window.ARGB(0xFF, color, color, color))
+				red := uint8(alpha * float64(t.A.Z))
+				green := uint8(beta * float64(t.B.Z))
+				blue := uint8(gamma * float64(t.C.Z))
+				fb.SetPixel(x, y, window.ARGB(0xFF, red, green, blue))
 			}
 		}
 	}
@@ -116,14 +118,14 @@ func draw(ctx *window.WindowContext) {
 	ctx.Framebuffer.Clear(0xFF000000)
 	t := gmath.Triangle[int32]{
 		A: gmath.Vector3[int32]{
-			X: 140,
+			X: 100,
 			Y: 400,
-			Z: 13,
+			Z: 255,
 		},
 		B: gmath.Vector3[int32]{
 			X: 300,
 			Y: 50,
-			Z: 128,
+			Z: 255,
 		},
 		C: gmath.Vector3[int32]{
 			X: 400,
