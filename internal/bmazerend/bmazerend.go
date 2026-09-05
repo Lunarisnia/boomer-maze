@@ -2,7 +2,6 @@ package bmazerend
 
 import (
 	"math"
-	"unsafe"
 
 	"github.com/lunarisnia/boomer-maze/internal/bmazerend/window"
 	"github.com/lunarisnia/boomer-maze/internal/gmath"
@@ -136,16 +135,10 @@ func draw(ctx *window.WindowContext) {
 	}
 	triangle(ctx.Framebuffer, t)
 
-	// blit framebuffer to texture
-	ctx.Texture.Update(nil, unsafe.Pointer(&ctx.Framebuffer.Pixels[0]), int(ctx.Framebuffer.Width)*4)
-	ctx.Renderer.Clear()
-	ctx.Renderer.Copy(ctx.Texture, nil, nil)
-	ctx.Renderer.Present()
 }
 
 func Run() {
-	win := window.New("Test", screenWidth, screenHeight)
-	defer win.Destroy()
+	win := window.New("Boomer Maze", screenWidth, screenHeight)
 	win.SetDrawFunction(draw)
 
 	win.Run()

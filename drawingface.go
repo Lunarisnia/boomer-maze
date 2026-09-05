@@ -1,10 +1,9 @@
-package bmazerend
+package main
 
 import (
 	"fmt"
 	"log"
 	"math/rand/v2"
-	"unsafe"
 
 	"github.com/lunarisnia/boomer-maze/internal/bmazerend/window"
 	"github.com/lunarisnia/boomer-maze/internal/gmath"
@@ -70,9 +69,4 @@ func drawRotatingFace(ctx *window.WindowContext) {
 	}
 	angle += 0.001
 
-	// blit framebuffer to texture
-	ctx.Texture.Update(nil, unsafe.Pointer(&ctx.Framebuffer.Pixels[0]), int(ctx.Framebuffer.Width)*4)
-	ctx.Renderer.Clear()
-	ctx.Renderer.Copy(ctx.Texture, nil, nil)
-	ctx.Renderer.Present()
 }
